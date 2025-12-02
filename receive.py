@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import pika
+import json
 
 # establish a connection with rabbitMQ server
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
@@ -10,7 +11,16 @@ channel.queue_declare(queue='hello')
 
 # define callback function (on message received handler)
 def callback(ch, method, properties, body):
-    print(f" [x] Received {body}")
+    # convert body bytes into string
+    text = body.decode("utf-8")
+    # convert string into json
+    job = json.loads(text)
+
+    input = job.get("input")
+    output = job.get("output")
+
+    print(f"input: {input}, output: {output}")
+
 
 # tell rabbitMQ that callback should be run whenever hello queue receives a message
 channel.basic_consume(queue='hello', auto_ack=True, on_message_callback=callback)
