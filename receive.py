@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import pika
 import json
+import cv2
+import os
 
 # establish a connection with rabbitMQ server
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
@@ -9,6 +11,21 @@ channel = connection.channel()
 # check that the queue exists by declaring the queue
 channel.queue_declare(queue='hello')
 
+def drain(input, output):
+    img = cv2.imread(input)
+    if img is None:
+        print("error")
+    else:
+        drained = cv2.bitwise_not(img)
+        output_dir = os.path.dirname(output)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        success = cv2.imwrite(output, drained)
+        if not success:
+            print("error")
+        print("success")
+
 # define callback function (on message received handler)
 def callback(ch, method, properties, body):
     # convert body bytes into string
@@ -16,10 +33,16 @@ def callback(ch, method, properties, body):
     # convert string into json
     job = json.loads(text)
 
-    input = job.get("input")
-    output = job.get("output")
+    inpt = job.get("input")
+    outpt = job.get("output")
 
-    print(f"input: {input}, output: {output}")
+    drain(inpt, outpt)
+    print("success2")
+    
+    #try:
+     #   ch.basic_ack(delivery_tag=method.delivery_tag)
+    #except Exception as e:
+     #   print("error")
 
 
 # tell rabbitMQ that callback should be run whenever hello queue receives a message
