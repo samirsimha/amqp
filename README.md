@@ -1,0 +1,1 @@
+i am currently learning about message-oriented middleware and amqp in my distributed systems class so i decided to create a rabbitMQ queue that implements a basic image processing pipeline using openCV
