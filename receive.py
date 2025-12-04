@@ -3,6 +3,7 @@ import pika
 import json
 import cv2
 import os
+import numpy as np, math
 
 # establish a connection with rabbitMQ server
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
@@ -11,39 +12,43 @@ channel = connection.channel()
 # check that the queue exists by declaring the queue
 channel.queue_declare(queue='hello')
 
-def drain(input, output):
+def image_processing(img):
+    # image sharpening using openCV
+    kernel = np.array([[0, -1,  0],
+                       [-1,  5, -1],
+                       [0, -1,  0]])
+    dst = cv2.filter2D(img, -1, kernel, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
+    return dst
+
+def sharpening(input, output):
     img = cv2.imread(input)
     if img is None:
-        print("error")
+        raise Exception(f"Failed to load input image: {input}")
     else:
-        drained = cv2.bitwise_not(img)
+        drained = image_processing(img)
         output_dir = os.path.dirname(output)
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
         success = cv2.imwrite(output, drained)
         if not success:
-            print("error")
-        print("success")
+            raise Exception(f"Failed to save output image: {output}")
 
 # define callback function (on message received handler)
 def callback(ch, method, properties, body):
-    # convert body bytes into string
-    text = body.decode("utf-8")
-    # convert string into json
-    job = json.loads(text)
+    try:
+        # convert body bytes into string
+        text = body.decode("utf-8")
+        # convert string into json
+        job = json.loads(text)
 
-    inpt = job.get("input")
-    outpt = job.get("output")
+        inpt = job.get("input")
+        outpt = job.get("output")
 
-    drain(inpt, outpt)
-    print("success2")
-    
-    #try:
-     #   ch.basic_ack(delivery_tag=method.delivery_tag)
-    #except Exception as e:
-     #   print("error")
-
+        sharpening(inpt, outpt)
+        print("success!")
+    except Exception as e:
+        print(str(e))
 
 # tell rabbitMQ that callback should be run whenever hello queue receives a message
 channel.basic_consume(queue='hello', auto_ack=True, on_message_callback=callback)

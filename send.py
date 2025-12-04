@@ -11,8 +11,8 @@ channel.queue_declare(queue='hello')
 
 # create payload
 job = {
-    "input": "images/cat.png",
-    "output": "output/drained_cat.png"
+    "input": "images/original.png",
+    "output": "output/sharpened.png"
 }
 
 message = json.dumps(job)
